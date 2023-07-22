@@ -1,0 +1,21 @@
+{"intents":
+[
+  {
+    "tag": "greeting",
+    "patterns": ["Hey", "Hello", "What's up?", "How is it going?", "Hi", "Good day"],
+    "responses": ["Hello Sir!", "Hello, what can I do for you?"]},
+  {
+    "tag": "make_order",
+    "patterns": ["Do you want to order", "Can I order","Order","One","Two","Three","Four"],
+    "responses": [""]},
+  {
+    "tag": "exit",
+    "patterns": ["Bye", "Stop", "Quit", "I want to quit", "Goodbye", "I want to exit", "I have to go"],
+    "responses": [""]},
+  {
+    "tag": "make_cancel",
+    "patterns": ["I want to cancel", "Cancel","Cancel order"],
+    "responses": [""]}
+]
+
+}
