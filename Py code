@@ -1,0 +1,230 @@
+import mysql.connector
+import speech_recognition
+from neuralintents import GenericAssistant
+import speech_recognition as sr
+import pyttsx3 as tts
+import sys
+
+recognizer = sr.Recognizer()
+def make_order():
+    global done
+    # Voice recognition code goes here
+    recognizer = sr.Recognizer()
+    speaker = tts.init()
+    speaker.setProperty('rate', 150)
+
+
+
+    speaker.say("What do you want to order?")
+    speaker.runAndWait()
+
+    terminate_keyword = "0"
+    done = False
+
+    conn = mysql.connector.connect(
+        host='127.0.0.1',
+        user='root',
+        password='',
+        database='fyp'
+    )
+
+    # Create a cursor object to interact with the database
+    cursor = conn.cursor()
+
+    while not done:
+        try:
+            with sr.Microphone() as mic:
+                recognizer.adjust_for_ambient_noise(mic, duration=0.2)
+                audio = recognizer.listen(mic)
+
+            try:
+                item = recognizer.recognize_google(audio)
+                item = item.lower()
+
+                if item == terminate_keyword:
+                    done = True
+                    speaker.say("Your order has been ended")
+                    speaker.runAndWait()
+                    break;
+                else:
+                    # Construct the SELECT query with a WHERE clause
+                    query = "SELECT * FROM food_list WHERE ID = %s"
+                    values = (item,)
+
+                    # Execute the SELECT query
+                    cursor.execute(query, values)
+
+                    # Fetch the row from the result
+                    row = cursor.fetchone()
+
+                    name = None  # Initialize with a default value
+
+                if row is not None:
+                    # Assign the column value to an integer variable
+                    name = str(row[0])
+                else:
+                    print("No row found with the specified condition")
+
+                    # Perform database operations
+                if name is not None:
+                    # Ask for quantity
+                    speaker.say(f"How many {name} would you like to order?")
+                    speaker.runAndWait()
+
+                    with sr.Microphone() as mic:
+                        recognizer.adjust_for_ambient_noise(mic, duration=0.2)
+                        audio = recognizer.listen(mic)
+                    try:
+                        quantity = recognizer.recognize_google(audio)
+                        # Convert the recognized quantity to an integer
+                        quantity = int(quantity)
+
+                        # Perform database operations
+
+                        sql_command = "INSERT INTO food (`ID`, `Name`, `Quantity`) VALUES (%s, %s, %s)"
+                        values = (None, name, quantity)
+
+                        cursor.execute(sql_command, values)
+                        conn.commit()
+
+                        speaker.say(f"I added {quantity} {name} to the order! What's your next order?")
+                        speaker.runAndWait()
+
+                    except sr.UnknownValueError:
+                        recognizer = sr.Recognizer()
+                        speaker.say("I did not understand the quantity! Please try again.")
+                        speaker.runAndWait()
+                    except ValueError:
+                        speaker.say("Invalid quantity! Please try again.")
+                        speaker.runAndWait()
+                else:
+                    speaker.say("Invalid item! Please try again.")
+                    speaker.runAndWait()
+
+            except sr.UnknownValueError:
+                recognizer = sr.Recognizer()
+                speaker.say("I did not understand you! Please try again!")
+                speaker.runAndWait()
+
+        except sr.UnknownValueError:
+            recognizer = sr.Recognizer()
+            speaker.say("I did not understand you! Please try again!")
+            speaker.runAndWait()
+
+    cursor.close()
+    conn.close()
+
+def cancel():
+    global done
+    # Voice recognition code goes here
+    recognizer = sr.Recognizer()
+    speaker = tts.init()
+    speaker.setProperty('rate', 150)
+
+    speaker.say("What order do you want to cancel?")
+    speaker.runAndWait()
+
+    terminate_keyword = "0"
+    done = False
+
+    conn = mysql.connector.connect(
+        host='127.0.0.1',
+        user='root',
+        password='',
+        database='fyp'
+    )
+
+    # Create a cursor object to interact with the database
+    cursor = conn.cursor()
+
+    while not done:
+        try:
+            with sr.Microphone() as mic:
+                recognizer.adjust_for_ambient_noise(mic, duration=0.2)
+                audio = recognizer.listen(mic)
+
+                item = recognizer.recognize_google(audio)
+                item = item.lower()
+
+                if item == terminate_keyword:
+                    done = True
+                    speaker.say("Cancel order has been ended")
+                    speaker.runAndWait()
+                    break;
+                else:
+                    query = "SELECT * FROM food_list WHERE ID = %s"
+                    values = (item,)
+
+                    # Execute the SELECT query
+                    cursor.execute(query, values)
+
+                    # Fetch the row from the result
+                    row = cursor.fetchone()
+
+                    name = None  # Initialize with a default value
+
+                    if row is not None:
+                       # Assign the column value to an integer variable
+                       name = str(row[0])
+                    else:
+                        print("No row found with the specified condition")
+
+                    if name is not None:
+                        sql_command = "DELETE FROM food WHERE name = %s"
+                        values = (name,)
+
+                        cursor.execute(sql_command, values)
+                        conn.commit()
+
+                        speaker.say(f"I deleted {name} from the order!")
+                        speaker.runAndWait()
+
+                    else:
+                         speaker.say("Invalid item! Please try again.")
+                         speaker.runAndWait()
+
+        except sr.UnknownValueError:
+            recognizer = sr.Recognizer()
+            speaker.say("I did not understand you! Please try again!")
+            speaker.runAndWait()
+
+    cursor.close()
+    conn.close()
+
+
+def hello():
+    speaker = tts.init()
+    speaker.setProperty('rate', 150)
+    speaker.say("Hello. What can I do for you?")
+    speaker.runAndWait()
+
+def quit():
+    speaker = tts.init()
+    speaker.setProperty('rate', 150)
+    speaker.say("Thank you for ordering")
+    speaker.runAndWait()
+    sys.exit(0)
+
+mappings = {
+    "greeting": hello,
+    "make_order": make_order,
+    "make_cancel":cancel,
+    "exit": quit
+}
+
+assistant = GenericAssistant('intents.json', intent_methods=mappings)
+assistant.train_model()
+
+while True:
+
+    try:
+        with speech_recognition.Microphone() as mic:
+            recognizer.adjust_for_ambient_noise(mic, duration=0.2)
+            audio = recognizer.listen(mic)
+
+            message = recognizer.recognize_google(audio)
+            message = message.lower()
+
+        assistant.request(message)
+    except speech_recognition.UnknownValueError:
+        recognizer = speech_recognition.Recognizer()
